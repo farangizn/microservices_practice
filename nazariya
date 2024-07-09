@@ -1,0 +1,135 @@
+In this application, we have two entities in different microservices - Customer and Fraud.
+In one microservice we save a customer, in another we check if they are a fraud or not. we
+will not actually be checking, because this project is not a real one. It's created to practice
+microservices.
+
+An application can be: Monolith (everything in one project), Microservice
+
+Microservices can interact using OpenFeign and RestTemplate
+
+While working with microservices we create one head project for dependency management.
+In parent project, we'll be able to add mutual dependencies to pom.xml
+
+EUREKA (Service Registry) - registers microservices and saves all the information about them
+by using EUREKA we can access microservices using their names rather than links like http://localhost:8081/
+
+<modules>
+    <module>customer</module>
+</modules>
+
+In head project, we have to register all modules in pom.xml
+
+<parent>
+        <groupId>org.example</groupId>
+        <artifactId>module10lesson1microservices</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath/> <!-- lookup parent from repository -->
+</parent>
+
+In sub project, we have to give the groupId (the packages) and the head project name in pom.xml
+
+<packaging>pom</packaging>
+
+maven will give an error unless you add packaging pom to the head projects pom.xml
+
+The packaging pom designation signifies that the project is intended to be a parent POM. This type of POM
+is not meant to produce artifact like JAR or WAR file but rather manage dependencies and configurations for its
+child modules.
+
+<dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter</artifactId>
+            </dependency>
+        </dependencies>
+</dependencyManagement>
+
+in head project pom, we place the spring-boot-starter dependency to dependencyManagement section, so that
+all starter deps can take the version from there. In short, we place libraries that control versions in
+dep management section
+
+spring.application.name=customer
+
+always give names to icroservices in application properties, because we will access them through the name
+using eureka
+
+example of how eureka works:
+
+Customer microservice asks eureka on which port the Fraud mictoservice is running and then addresses Fraud
+
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-dependencies</artifactId>
+     <version>2023.0.2</version>
+     <type>pom</type>
+     <scope>import</scope>
+</dependency>
+      ->
+<type>pom</type>
+
+When you set <type>pom<type>, you are indicating that the dependency you are including is a pom file
+rather than a jarfile. This is typically used to import a group of dependencies that are defined
+in another pom.xml file
+       ->
+<scope>import</scope>
+tells maven to import the dependencyManagement section of the specified POM file into the current project.
+
+We add this to dependencyManagement section, because there are libraries that use the libraries from cloud family
+<dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+</dependency>
+
+
+in eureka server microservice, we add the dependency above
+
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+
+in client microservices, we should put this one
+
+in eureka client microservice, we set the port to 8761 and then when we send request to this port
+http://localhost:8761 in browser, a dashboard with all info will appear
+
+eureka.client.fetch-registry=false
+eureka.client.register-with-eureka=false
+
+these are put to eureka's application props so that the eureka microservice will not appear in the list
+in dashboard
+
+now that all applications are eureka clients, we always need to run eureka server first. Otherwise , it wont work
+
+Gateway - gateway is like a reception for the microservice app,
+clients shouldnt be able to access microservices directly. They
+should send requests to the gateway.
+
+Openfeign and restTemplate are not asynchronous, that's why it's better to
+use messaging services for establishing communication between our microservices.
+Thus, when the returned result is not important, we use messaging services
+(for example, sending messages (e.g. via firebase)).
+
+By using messaging services, we make our microservices not dependent on each other,
+otherwise, if firebase is not working for some reason, our whole app will pause.
+
+RabbitMQ is used in this project as a messaging service.
+
+How it works:
+Producer sends messages to exchange (like a pool) -> exchange forwards the messages
+based on routing pattern -> messages reach queues and listeners receive them (each queue has it's own listener)
+
+What we do:
+
+Create queues, create EXCHANGE and bind queues to exchange
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+Configuration.
